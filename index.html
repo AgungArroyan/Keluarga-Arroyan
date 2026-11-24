@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keuangan Keluarga</title>
+<style>
+:root{--bg:#f3f6f1;--card:#fff;--ink:#1f2a24;--mut:#6b7a70;--line:#dfe6dc;--in:#2f7d4f;--sv:#b7791f;--out:#c2483d;--acc:#2f7d4f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a16;--card:#1d2620;--ink:#e8efe9;--mut:#93a499;--line:#2c3a31;--in:#5fbf86;--sv:#e0a84a;--out:#e8776c;--acc:#5fbf86;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141a16;--card:#1d2620;--ink:#e8efe9;--mut:#93a499;--line:#2c3a31;--in:#5fbf86;--sv:#e0a84a;--out:#e8776c;--acc:#5fbf86;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 "Trebuchet MS",Verdana,sans-serif}
+main{max-width:720px;margin:0 auto;padding:16px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:1.4rem;margin:0}
+h2{font-size:1.05rem;margin:0 0 10px}
+input,select,button{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-width:0}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+button{cursor:pointer;background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+button.x{background:none;color:var(--mut);border:none;padding:4px 8px;font-size:1.1rem}
+.sum{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.sum div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.sum small{color:var(--mut);display:block}
+.sum b{font-size:1.1rem;word-break:break-word}
+.sum .sisa{grid-column:1/-1;border-width:2px}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+section.in{border-left:5px solid var(--in)}section.sv{border-left:5px solid var(--sv)}section.out{border-left:5px solid var(--out)}
+form{display:flex;gap:8px;flex-wrap:wrap}
+form>*{flex:1 1 120px}form button{flex:0 0 auto}
+ul{list-style:none;margin:10px 0 0;padding:0}
+li{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+li span.n{flex:1;min-width:0;overflow-wrap:anywhere}li small{color:var(--mut);display:block}
+li b{white-space:nowrap}
+.empty{color:var(--mut);margin:10px 0 0}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--out)}
+.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+<header><h1>Keuangan Keluarga</h1><input type="month" id="bln" aria-label="Bulan"></header>
+<div class="sum">
+<div><small>Pemasukan</small><b id="tIn" style="color:var(--in)"></b></div>
+<div><small>Tabungan wajib</small><b id="tSv" style="color:var(--sv)"></b></div>
+<div><small>Pengeluaran</small><b id="tOut" style="color:var(--out)"></b></div>
+<div class="sisa"><small>Sisa uang bulan ini</small><b id="tSisa"></b></div>
+</div>
+
+<section class="in"><h2>Pemasukan</h2>
+<form data-t="in"><input name="nama" placeholder="Sumber (mis. Gaji Ayah)" required><input name="jml" type="number" min="1" inputmode="numeric" placeholder="Jumlah (Rp)" required><button>Tambah</button></form>
+<ul id="l-in"></ul></section>
+
+<section class="sv"><h2>Tabungan wajib</h2>
+<form data-t="sv"><input name="nama" placeholder="Tujuan (mis. Dana darurat)" required><input name="jml" type="number" min="1" inputmode="numeric" placeholder="Jumlah (Rp)" required><button>Tambah</button></form>
+<ul id="l-sv"></ul></section>
+
+<section class="out"><h2>Pengeluaran</h2>
+<form data-t="out"><select name="kat" id="kat" aria-label="Jenis pengeluaran"></select>
+<input name="baru" id="baru" class="hide" placeholder="Tulis jenis pengeluaran">
+<input name="jml" type="number" min="1" inputmode="numeric" placeholder="Jumlah (Rp)" required><input name="cat" placeholder="Catatan (opsional)"><button>Tambah</button></form>
+<ul id="l-out"></ul></section>
+</main>
+<script>
+var KEY="keuangan-keluarga-v1",DEF=["Makanan & belanja","Listrik & air","Transportasi","Pendidikan","Kesehatan","Hiburan","Cicilan"];
+var S={items:[],kats:[]};
+try{var r=localStorage.getItem(KEY);if(r)S=JSON.parse(r)}catch(e){}
+if(!S.items)S.items=[];if(!S.kats)S.kats=[];
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+var $=function(i){return document.getElementById(i)};
+var rp=function(n){return"Rp "+Math.round(n).toLocaleString("id-ID")};
+var bln=$("bln");bln.value=new Date().toISOString().slice(0,7);
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function kats(){var a=DEF.concat(S.kats);return a.filter(function(v,i){return a.indexOf(v)===i})}
+function fillKat(sel){var k=kats();$("kat").innerHTML=k.map(function(x){return"<option>"+esc(x)+"</option>"}).join("")+'<option value="__baru">+ Jenis lain (tulis sendiri)</option>';if(sel)$("kat").value=sel;tog()}
+function tog(){var b=$("kat").value==="__baru";$("baru").classList.toggle("hide",!b);$("baru").required=b}
+$("kat").onchange=tog;
+function render(){
+ var m=bln.value,tot={in:0,sv:0,out:0},cur=$("kat").value;
+ ["in","sv","out"].forEach(function(t){
+  var rows=S.items.filter(function(x){return x.t===t&&x.m===m});
+  rows.forEach(function(x){tot[t]+=x.jml});
+  var ul=$("l-"+t);
+  ul.innerHTML=rows.length?rows.map(function(x){
+   var pct=t==="out"&&tot.in?"":"";
+   return'<li><span class="n">'+esc(x.nama)+(x.cat?"<small>"+esc(x.cat)+"</small>":"")+"</span><b>"+rp(x.jml)+'</b><button class="x" data-d="'+x.id+'" aria-label="Hapus">✕</button></li>'}).join(""):'<p class="empty">Belum ada data bulan ini.</p>';
+ });
+ $("tIn").textContent=rp(tot.in);$("tSv").textContent=rp(tot.sv);$("tOut").textContent=rp(tot.out);
+ var s=tot.in-tot.sv-tot.out,e=$("tSisa");e.textContent=rp(s);e.style.color=s<0?"var(--out)":"var(--in)";
+}
+document.addEventListener("click",function(e){var d=e.target.dataset&&e.target.dataset.d;if(d){S.items=S.items.filter(function(x){return String(x.id)!==d});save();render()}});
+document.querySelectorAll("form").forEach(function(f){f.onsubmit=function(ev){
+ ev.preventDefault();var t=f.dataset.t,jml=parseFloat(f.jml.value);if(!(jml>0))return;
+ var it={id:Date.now()+Math.random(),t:t,m:bln.value,jml:jml};
+ if(t==="out"){var k=f.kat.value;
+  if(k==="__baru"){k=f.baru.value.trim();if(!k)return;if(kats().indexOf(k)<0)S.kats.push(k)}
+  it.nama=k;it.cat=f.cat.value.trim();
+ }else it.nama=f.nama.value.trim();
+ S.items.push(it);save();var keep=t==="out"?it.nama:null;f.reset();
+ if(t==="out"){fillKat(keep)}render()}});
+bln.onchange=render;fillKat();render();
+</script>
+</body>
+</html>
