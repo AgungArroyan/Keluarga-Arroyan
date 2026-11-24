@@ -45,6 +45,7 @@ li b{white-space:nowrap}
 <div><small>Tabungan wajib</small><b id="tSv" style="color:var(--sv)"></b></div>
 <div><small>Pengeluaran</small><b id="tOut" style="color:var(--out)"></b></div>
 <div class="sisa"><small>Sisa uang bulan ini</small><b id="tSisa"></b></div>
+<div class="sisa"><small>Sisa uang total (semua bulan)</small><b id="tAll"></b></div>
 </div>
 
 <section class="in"><h2>Pemasukan</h2>
@@ -87,6 +88,7 @@ function render(){
  });
  $("tIn").textContent=rp(tot.in);$("tSv").textContent=rp(tot.sv);$("tOut").textContent=rp(tot.out);
  var s=tot.in-tot.sv-tot.out,e=$("tSisa");e.textContent=rp(s);e.style.color=s<0?"var(--out)":"var(--in)";
+ var a=0;S.items.forEach(function(x){a+=x.t==="in"?x.jml:-x.jml});var g=$("tAll");g.textContent=rp(a);g.style.color=a<0?"var(--out)":"var(--in)";
 }
 document.addEventListener("click",function(e){var d=e.target.dataset&&e.target.dataset.d;if(d){S.items=S.items.filter(function(x){return String(x.id)!==d});save();render()}});
 document.querySelectorAll("form").forEach(function(f){f.onsubmit=function(ev){
